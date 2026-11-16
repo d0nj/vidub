@@ -1,0 +1,25 @@
+[package]
+name = "vidub_app"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+publish = false
+
+[dependencies]
+slint = { version = "=1.18.1", default-features = false, features = ["std", "backend-default", "renderer-femtovg", "renderer-software", "accessibility", "compat-1-18"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "process", "fs", "net", "time", "sync", "io-util", "signal"] }
+serde_json = "1.0.154"
+reqwest = { workspace = true }
+tempfile = { workspace = true }
+vidub_sidecar = { path = "../vidub_sidecar" }
+vidub_core = { path = "../vidub_core" }
+vidub_mpv = { path = "../vidub_mpv" }
+vidub_config = { path = "../vidub_config" }
+sha2 = { workspace = true }
+anyhow = { workspace = true }
+dirs = { workspace = true }
+rfd = { workspace = true }
+open = { workspace = true }
+
+[build-dependencies]
+slint-build = "=1.18.1"

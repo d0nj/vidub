@@ -1,0 +1,28 @@
+[package]
+name = "vidub_sidecar"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { workspace = true }
+dirs = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tempfile = { workspace = true }
+semver = { workspace = true }
+sha2 = { workspace = true }
+which = { workspace = true }
+zip = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+xz2 = { workspace = true }
+vidub_process = { path = "../vidub_process" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+xattr = "1.7.0"

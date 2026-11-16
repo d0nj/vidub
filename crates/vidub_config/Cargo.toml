@@ -1,0 +1,15 @@
+[package]
+name = "vidub_config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+dirs = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+tempfile = { workspace = true }
+keyring = { workspace = true }

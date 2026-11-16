@@ -1,0 +1,29 @@
+[package]
+name = "vidub_core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+subtp = { workspace = true }
+tempfile = { workspace = true }
+vidub_sidecar = { path = "../vidub_sidecar" }
+vidub_config = { path = "../vidub_config" }
+vidub_process = { path = "../vidub_process" }
+tonic = { workspace = true }
+prost = { workspace = true }
+tonic-prost = { workspace = true }
+hound = { workspace = true }
+sha2 = { workspace = true }
+
+[build-dependencies]
+protoc-bin-vendored = { workspace = true }
+tonic-prost-build = { workspace = true }

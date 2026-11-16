@@ -1,0 +1,15 @@
+target/
+
+dist/
+output/
+packaging/*/output/
+/ViDubSetup-*.exe
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log
+*~
+*.swp

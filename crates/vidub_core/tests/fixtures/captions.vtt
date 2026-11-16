@@ -1,0 +1,13 @@
+WEBVTT
+
+NOTE This is a comment block.
+
+00:00:01.000 --> 00:00:02.500
+Hello world.
+
+00:00:03.000 --> 00:00:04.000
+Multi line
+cue here.
+
+00:01:10.250 --> 00:01:12.000
+Third cue.

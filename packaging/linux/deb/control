@@ -1,0 +1,19 @@
+Package: vidub
+Version: __VERSION__
+Section: utils
+Priority: optional
+Architecture: __ARCH__
+Maintainer: ViDub Contributors
+Depends: libc6 (>= 2.28), libxcb1, libxkbcommon0, libgl1
+Recommends: mpv, ffmpeg
+Description: ViDub — local video dubbing (Vietnamese TTS)
+ ViDub dubs local video and YouTube/Bilibili content into Vietnamese
+ speech: transcript (captions, then Whisper STT), translation via
+ NVIDIA NIM, OpenRouter, or Google Gemini, Piper text-to-speech with
+ the bundled ngochuyennew voice, and same-length WAV sync with ffmpeg export.
+ .
+ Bundled sidecars live in /usr/lib/vidub/bin (yt-dlp, ffmpeg, ffprobe,
+ piper + espeak-ng-data, qjs) and the voice in /usr/lib/vidub/models.
+ Preview needs a system mpv (Recommends: mpv) — export works without it.
+ .
+ __ARCH__ build. Licenses: /usr/lib/vidub/THIRD_PARTY_NOTICES.md.

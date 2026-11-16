@@ -1,0 +1,50 @@
+[workspace]
+members = [
+    "crates/vidub_core",
+    "crates/vidub_sidecar",
+    "crates/vidub_mpv",
+    "crates/vidub_app",
+    "crates/vidub_config",
+    "crates/vidub_process",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+
+[workspace.dependencies]
+open = "5.4.5"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "process", "fs", "net", "time", "sync", "io-util", "signal"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "multipart", "stream", "http2", "system-proxy"] }
+dirs = "7.0.0"
+rfd = "0.18.0"
+subtp = "0.2.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
+thiserror = "2.0.21"
+anyhow = "1.0.104"
+async-trait = "0.1.92"
+tempfile = "3.27.0"
+semver = "1.0.28"
+sha2 = "0.11.1"
+which = "8.0.6"
+zip = "9.5.1"
+tar = "0.4.46"
+flate2 = "1.1.11"
+xz2 = "0.1"
+slint = { version = "1.18.1", default-features = false, features = ["std", "backend-default", "renderer-femtovg", "renderer-software", "accessibility", "compat-1-18"] }
+slint-build = "1.18.1"
+tonic = { version = "0.14.9", features = ["transport", "tls-aws-lc", "tls-native-roots"] }
+prost = "0.14.5"
+tonic-build = "0.14.9"
+tonic-prost-build = "0.14.9"
+tonic-prost = "0.14.9"
+protoc-bin-vendored = "3.3.0"
+
+xattr = "1.7.0"
+hound = "3.5.1"
+keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "sync-secret-service"] }

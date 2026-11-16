@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=ViDub
+GenericName=Video Dubbing
+Comment=Local video dubbing (Vietnamese TTS)
+Exec=vidub
+Type=Application
+Terminal=false
+Categories=AudioVideo;Video;Utility;
+StartupNotify=true

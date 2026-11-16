@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.1.0). Must match Cargo.toml version."
+        required: true
+        type: string
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-windows:
+    name: release-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify release tag matches Cargo.toml
+        shell: pwsh
+        run: |
+          $V = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
+          $Tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          if ($Tag -ne "v$V") {
+            Write-Error "Release tag '$Tag' does not match Cargo.toml version 'v$V'"
+            exit 1
+          }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release -p vidub_app
+      - name: Fetch pinned sidecars
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-sidecars.ps1
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $V = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          $mk = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (-not (Test-Path $mk)) { $mk = "makensis" }
+          & $mk "-DVERSION=$V" packaging\windows\vidub.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Smoke — every bundled binary must run
+        shell: bash
+        run: |
+          set -uo pipefail
+          DEST="$TEMP/vidub-smoke"
+          rm -rf "$DEST"
+          start //wait "" "output/ViDubSetup-"*.exe /S /D="$DEST" || exit 1
+          bash scripts/smoke-sidecars.sh "$DEST/bin" \
+            --require yt-dlp,mpv,qjs,piper,ffmpeg,ffprobe
+      - name: Stage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: output/ViDubSetup-*.exe
+          if-no-files-found: error
+
+  release-linux:
+    name: release-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify release tag matches Cargo.toml
+        run: |
+          V="$(grep -m1 '^version = ' Cargo.toml | sed 's/^version = "//; s/"$//')"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          [ "$TAG" = "v$V" ] || { echo "Release tag '$TAG' does not match Cargo.toml version 'v$V'" >&2; exit 1; }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Slint + packaging deps
+        run: sudo apt-get update && sudo apt-get install -y libxcb1-dev libxkbcommon-dev libgl1-mesa-dev libfontconfig1-dev libdbus-1-dev patchelf
+      - name: Build
+        run: cargo build --release -p vidub_app
+      - name: Fetch pinned sidecars (Linux)
+        run: bash scripts/fetch-sidecars.sh
+      - name: Assemble tarball + deb
+        run: bash packaging/linux/assemble.sh
+      - name: Smoke — every bundled binary must run
+        run: |
+          set -uo pipefail
+          TMP="$(mktemp -d)"
+          tar -xzf output/vidub-*.tar.gz -C "$TMP"
+          chmod +x scripts/smoke-sidecars.sh
+          bash scripts/smoke-sidecars.sh "$TMP/vidub/bin" \
+            --require yt-dlp,qjs,piper,ffmpeg,ffprobe
+      - name: Stage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            output/vidub-*.tar.gz
+            output/*.deb
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    needs: [release-windows, release-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: collected
+          merge-multiple: true
+      - name: List collected artifacts
+        run: find collected -type f -printf '%P %s\n' | sort
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ViDub ${{ github.event.inputs.tag || github.ref_name }}
+          draft: false
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: collected/*

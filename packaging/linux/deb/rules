@@ -1,0 +1,8 @@
+#!/usr/bin/make -f
+.PHONY: build clean
+
+build:
+	./packaging/linux/assemble.sh --deb-only
+
+clean:
+	rm -rf build output

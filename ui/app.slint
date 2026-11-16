@@ -1,0 +1,526 @@
+import { Button, CheckBox, ComboBox, GroupBox, LineEdit, ListView, ProgressIndicator, RadioGroup, ScrollView, Slider, TextEdit } from "std-widgets.slint";
+
+export struct SidecarRow {
+    name: string,
+    version: string,
+    source: string,
+}
+
+export component MainWindow inherits Window {
+    title: "ViDub";
+    width: 720px;
+    height: 600px;
+    in-out property <string> preview_status;
+    in-out property <float> seek;
+    in-out property <string> time_label;
+    in-out property <bool> playing;
+    in-out property <bool> use_dub: true;
+    callback preview-requested();
+    callback play-pause-requested();
+    callback seek-requested(value: float);
+    callback audio-toggle-requested(use_dub: bool);
+
+    in property <[SidecarRow]> sidecars;
+    in-out property <string> status;
+    in-out property <string> url;
+    in-out property <float> progress;
+    in-out property <string> export_path;
+    in-out property <string> export_target;
+    in-out property <string> export_status;
+    in-out property <float> export_progress;
+    in-out property <bool> export_busy;
+
+    in-out property <int> page: 0;
+
+    callback export-requested(out_path: string);
+    callback browse-export-requested();
+    callback dub-requested(url_or_path: string);
+
+    in-out property <int> provider: 0;
+    in-out property <string> key-heading: "API key NVIDIA của bạn";
+    in-out property <string> key-hint: "Nhận API key miễn phí tại build.nvidia.com";
+    in-out property <string> key-link-label: "Mở trang lấy API key ↗";
+    in-out property <string> key-link-url: "https://build.nvidia.com";
+    in-out property <string> settings-key;
+    in-out property <string> key-status;
+    in-out property <bool> key-test-busy;
+    in property <[string]> voice-names;
+    in property <[string]> voice-files;
+    in-out property <int> selected-voice: 0;
+    in-out property <bool> voice-downloaded;
+    in-out property <float> download-progress;
+    in-out property <bool> download-busy;
+    in-out property <string> download-status;
+    in-out property <int> quality: 1;
+    in-out property <int> loudness: 1;
+    in-out property <string> output-folder;
+    in-out property <string> settings-status;
+    in-out property <string> app-version;
+    in-out property <string> setup-status;
+    in-out property <bool> setup-busy;
+
+    callback key-test-requested(key: string);
+    callback key-link-clicked(url: string);
+    callback voice-download-requested(file: string);
+    callback settings-key-committed(key: string);
+    callback provider-changed(index: int);
+    callback voice-changed(name: string);
+    callback quality-changed(index: int);
+    callback loudness-changed(index: int);
+    callback output-folder-changed(folder: string);
+    callback setup-requested();
+
+    public function selected-voice-file() -> string {
+        if root.selected-voice >= 0 && root.selected-voice < root.voice-files.length {
+            return root.voice-files[root.selected-voice];
+        }
+        return "";
+    }
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+
+        HorizontalLayout {
+            spacing: 8px;
+            Button {
+                text: "Lồng tiếng";
+                enabled: root.page != 0;
+                clicked => { root.page = 0; }
+                horizontal-stretch: 1;
+            }
+            Button {
+                text: "Cài đặt";
+                enabled: root.page != 1;
+                clicked => { root.page = 1; }
+                horizontal-stretch: 1;
+            }
+        }
+
+        if root.page == 0: ScrollView {
+            vertical-stretch: 1;
+            min-height: 0;
+            content-height: dub-layout.preferred-height;
+            dub-layout := VerticalLayout {
+                width: parent.content-width;
+                spacing: 12px;
+
+                GroupBox {
+                    title: "Lồng tiếng";
+                    VerticalLayout {
+                        spacing: 8px;
+                        TextEdit {
+                            height: 36px;
+                            text <=> url;
+                            placeholder-text: "Dán liên kết YouTube/Bilibili hoặc đường dẫn tệp video";
+                        }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button {
+                                text: "Lồng tiếng video";
+                                clicked => { dub-requested(url); }
+                            }
+                            Text {
+                                text: status;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                                wrap: word-wrap;
+                                font-size: 13px;
+                            }
+                        }
+                        ProgressIndicator {
+                            height: 8px;
+                            progress: root.progress;
+                        }
+                    }
+                }
+
+                GroupBox {
+                    title: "Xem trước";
+                    VerticalLayout {
+                        spacing: 8px;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button {
+                                text: "Xem trước";
+                                clicked => { preview-requested(); }
+                            }
+                            Text {
+                                text: preview_status;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                                wrap: word-wrap;
+                                font-size: 13px;
+                            }
+                        }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button {
+                                text: playing ? "Tạm dừng" : "Phát";
+                                clicked => { play-pause-requested(); }
+                            }
+                            Slider {
+                                minimum: 0;
+                                maximum: 1;
+                                step: 0.001;
+                                value <=> seek;
+                                horizontal-stretch: 1;
+                                released(v) => { seek-requested(v); }
+                            }
+                            Text {
+                                text: time_label;
+                                vertical-alignment: center;
+                            }
+                        }
+                        CheckBox {
+                            text: use_dub ? "Âm thanh lồng tiếng" : "Âm thanh gốc";
+                            checked <=> use_dub;
+                            toggled => { audio-toggle-requested(use_dub); }
+                        }
+                    }
+                }
+
+                GroupBox {
+                    title: "Xuất video";
+                    VerticalLayout {
+                        spacing: 8px;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button {
+                                text: "Xuất video";
+                                enabled: !root.export_busy;
+                                clicked => { export-requested(export_path); }
+                            }
+                            Text {
+                                text: root.export_target == "" ? "Chưa chọn nơi lưu" : root.export_target;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                                overflow: elide;
+                                font-size: 13px;
+                            }
+                            Button {
+                                text: "Chọn chỗ lưu…";
+                                enabled: !root.export_busy;
+                                clicked => { browse-export-requested(); }
+                            }
+                        }
+                        ProgressIndicator {
+                            height: 8px;
+                            progress: root.export_progress;
+                            visible: root.export_busy;
+                        }
+                        Text {
+                            text: export_status;
+                            wrap: word-wrap;
+                            font-size: 13px;
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.page == 1: ScrollView {
+            vertical-stretch: 1;
+            min-height: 0;
+            content-height: settings-layout.preferred-height;
+            settings-layout := VerticalLayout {
+                width: parent.content-width;
+                spacing: 8px;
+                padding-bottom: 12px;
+
+                Text {
+                    text: "Thiết lập công cụ";
+                    font-size: 14px;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Button {
+                        text: "Thiết lập tất cả";
+                        enabled: !root.setup-busy;
+                        clicked => { setup-requested(); }
+                    }
+                    Text {
+                        text: root.setup-status;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        wrap: word-wrap;
+                        font-size: 13px;
+                    }
+                }
+                ProgressIndicator {
+                    height: 8px;
+                    indeterminate: root.setup-busy;
+                    visible: root.setup-busy;
+                }
+
+                Text {
+                    text: "Dịch bằng";
+                    font-size: 14px;
+                }
+                RadioGroup {
+                    RadioButton {
+                        text: "NVIDIA (miễn phí)";
+                        checked: root.provider == 0;
+                        toggled => {
+                            if (self.checked) {
+                                root.provider = 0;
+                                root.provider-changed(0);
+                            }
+                        }
+                    }
+                    RadioButton {
+                        text: "OpenRouter";
+                        checked: root.provider == 1;
+                        toggled => {
+                            if (self.checked) {
+                                root.provider = 1;
+                                root.provider-changed(1);
+                            }
+                        }
+                    }
+                    RadioButton {
+                        text: "Google Gemini";
+                        checked: root.provider == 2;
+                        toggled => {
+                            if (self.checked) {
+                                root.provider = 2;
+                                root.provider-changed(2);
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.key-heading;
+                    font-size: 14px;
+                }
+                LineEdit {
+                    input-type: password;
+                    text <=> root.settings-key;
+                    placeholder-text: "Dán API key vào đây";
+                    accepted(t) => {
+                        root.settings-key-committed(t);
+                    }
+                    changed has-focus => {
+                        if (!self.has-focus) {
+                            root.settings-key-committed(root.settings-key);
+                        }
+                    }
+                }
+                Text {
+                    text: root.key-hint;
+                    font-size: 13px;
+                }
+                key-link := Rectangle {
+                    height: 20px;
+                    width: link-text.preferred-width + 4px;
+                    background: transparent;
+                    link-text := Text {
+                        text: root.key-link-label;
+                        font-size: 13px;
+                        color: #6aa9ff;
+                        vertical-alignment: center;
+                    }
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.key-link-clicked(root.key-link-url); }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    Button {
+                        text: "Kiểm tra API key";
+                        enabled: !root.key-test-busy;
+                        clicked => { root.key-test-requested(root.settings-key); }
+                    }
+                    Text {
+                        text: root.key-status;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        wrap: word-wrap;
+                        font-size: 13px;
+                    }
+                }
+
+                Text {
+                    text: "Giọng đọc (giọng lồng tiếng)";
+                    font-size: 14px;
+                }
+                ComboBox {
+                    model: root.voice-names;
+                    current-index <=> root.selected-voice;
+                    selected(value) => { root.voice-changed(value); }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: root.voice-downloaded ? "Đã tải xuống" : "Chưa tải xuống";
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        font-size: 13px;
+                    }
+                    Button {
+                        text: "Tải giọng đọc";
+                        enabled: !root.voice-downloaded && !root.download-busy;
+                        clicked => { root.voice-download-requested(root.selected-voice-file()); }
+                    }
+                }
+                ProgressIndicator {
+                    height: 8px;
+                    progress: root.download-progress;
+                    indeterminate: root.download-busy && root.download-progress <= 0;
+                    visible: root.download-busy;
+                }
+                Text {
+                    text: root.download-status;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    visible: root.download-status != "";
+                }
+
+                Text {
+                    text: "Chất lượng dịch";
+                    font-size: 14px;
+                }
+                RadioGroup {
+                    RadioButton {
+                        text: "Nhanh";
+                        checked: root.quality == 0;
+                        toggled => {
+                            if (self.checked) {
+                                root.quality = 0;
+                                root.quality-changed(0);
+                            }
+                        }
+                    }
+                    RadioButton {
+                        text: "Cân bằng";
+                        checked: root.quality == 1;
+                        toggled => {
+                            if (self.checked) {
+                                root.quality = 1;
+                                root.quality-changed(1);
+                            }
+                        }
+                    }
+                    RadioButton {
+                        text: "Chất lượng cao nhất";
+                        checked: root.quality == 2;
+                        toggled => {
+                            if (self.checked) {
+                                root.quality = 2;
+                                root.quality-changed(2);
+                            }
+                        }
+                    }
+                }
+                Text {
+                    text: root.quality == 0 ? "Nhanh nhất — tốt để thử nhanh." : root.quality == 1 ? "Khuyên dùng — câu chữ tốt, không quá chậm." : "Chậm nhất — câu chữ cẩn thận nhất.";
+                    font-size: 13px;
+                }
+
+                Text {
+                    text: "Mức âm lượng";
+                    font-size: 14px;
+                }
+                RadioGroup {
+                    RadioButton {
+                        text: "Video YouTube và online";
+                        checked: root.loudness == 0;
+                        toggled => {
+                            if (self.checked) {
+                                root.loudness = 0;
+                                root.loudness-changed(0);
+                            }
+                        }
+                    }
+                    RadioButton {
+                        text: "Podcast";
+                        checked: root.loudness == 1;
+                        toggled => {
+                            if (self.checked) {
+                                root.loudness = 1;
+                                root.loudness-changed(1);
+                            }
+                        }
+                    }
+                    RadioButton {
+                        text: "TV hoặc radio";
+                        checked: root.loudness == 2;
+                        toggled => {
+                            if (self.checked) {
+                                root.loudness = 2;
+                                root.loudness-changed(2);
+                            }
+                        }
+                    }
+                }
+                Text {
+                    text: root.loudness == 0 ? "Mức âm lượng cho video YouTube." : root.loudness == 1 ? "Nhỏ hơn một chút. Nghe bằng tai nghe rất tốt." : "Âm lượng ổn định nhất, cho TV hoặc radio.";
+                    font-size: 13px;
+                }
+
+                Text {
+                    text: "Nơi lưu video đã xong";
+                    font-size: 14px;
+                }
+                LineEdit {
+                    text <=> root.output-folder;
+                    placeholder-text: "Thư mục lưu video đã xong";
+                    accepted(t) => {
+                        root.output-folder-changed(t);
+                    }
+                    changed has-focus => {
+                        if (!self.has-focus) {
+                            root.output-folder-changed(root.output-folder);
+                        }
+                    }
+                }
+                Text {
+                    text: "Mặc định lưu ngay cạnh video gốc — đổi được ở đây.";
+                    font-size: 13px;
+                }
+                Text {
+                    text: root.settings-status;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    visible: root.settings-status != "";
+                }
+
+                Text {
+                    text: "Công cụ ứng dụng này dùng";
+                    font-size: 14px;
+                }
+                ListView {
+                    height: 140px;
+                    for row in sidecars: Rectangle {
+                        height: 22px;
+                        HorizontalLayout {
+                            padding-left: 4px;
+                            padding-right: 4px;
+                            spacing: 8px;
+                            Text { text: row.name; font-size: 13px; width: 110px; }
+                            Text { text: row.source == "missing" ? "Thiếu" : "Đã sẵn sàng"; font-size: 13px; width: 140px; }
+                            Text { text: row.version; font-size: 13px; horizontal-stretch: 1; overflow: elide; }
+                        }
+                    }
+                }
+
+                Text {
+                    text: "Giới thiệu ViDub";
+                    font-size: 14px;
+                }
+                Text {
+                    text: "Phiên bản ViDub " + root.app-version + ". ViDub miễn phí.";
+                    font-size: 13px;
+                }
+                Text {
+                    text: "Một số công cụ là mã nguồn mở. Giấy phép của chúng có trong THIRD_PARTY_NOTICES.";
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}
